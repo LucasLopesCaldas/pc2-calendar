@@ -470,17 +470,20 @@
       if (saved) {
         try {
           const config = JSON.parse(saved);
-          if (config.startDate) {
+
+          if (typeof config.startDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(config.startDate)) {
             document.getElementById('startDate').value = config.startDate;
             const [y, m, d] = config.startDate.split('-').map(Number);
             cycleStartDate = new Date(y, m - 1, d);
           }
-          if (config.pattern && config.pattern.length > 0) {
+
+          if (Array.isArray(config.pattern) && config.pattern.length > 0 &&
+              config.pattern.every(p => p === 'work' || p === 'off')) {
             pattern = config.pattern;
             renderPattern();
           }
         } catch (e) {
-          // ignore invalid data
+          console.warn('Configuração salva inválida, ignorando.', e);
         }
       }
     }
