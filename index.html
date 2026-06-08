@@ -13,7 +13,7 @@
       --text: #eee;
       --text-muted: #aaa;
       --work-bg: #e94560;
-      --off-bg: transparent;
+      --off-bg: #0f3460;
       --today-border: #53d769;
       --holiday-bg: #ff9800;
       --radius: 8px;
@@ -238,8 +238,8 @@
     }
 
     .legend-dot.work { background: var(--work-bg); }
-    .legend-dot.off { background: var(--surface2); }
-    .legend-dot.today { border: 2px solid var(--today-border); background: var(--surface2); }
+    .legend-dot.off { background: var(--off-bg); }
+    .legend-dot.today { border: 2px solid var(--today-border); background: var(--off-bg); }
     .legend-dot.holiday { background: var(--holiday-bg); }
 
     /* ── Color Picker ── */
@@ -364,7 +364,7 @@
     }
 
     .day-cell.off-day {
-      background: var(--surface2);
+      background: var(--off-bg);
       color: var(--text-muted);
     }
 
@@ -496,10 +496,6 @@
       root.style.setProperty('--work-bg', document.getElementById('colorWork').value);
       root.style.setProperty('--off-bg', document.getElementById('colorOff').value);
       root.style.setProperty('--today-border', document.getElementById('colorToday').value);
-      root.style.setProperty('--holiday-bg', document.getElementById('colorHoliday').value);
-
-      // Update off-day surface2 to match chosen off color
-      root.style.setProperty('--surface2', document.getElementById('colorOff').value);
 
       saveConfig();
       renderCalendar();
@@ -573,6 +569,11 @@
         holidaysCache[year] = getBrazilianHolidays(year);
       }
       return holidaysCache[year];
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+                .replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
     // ── Config panel toggle ──
@@ -670,7 +671,7 @@
             }
             if (config.colors.off) {
               document.getElementById('colorOff').value = config.colors.off;
-              root.style.setProperty('--surface2', config.colors.off);
+              root.style.setProperty('--off-bg', config.colors.off);
             }
             if (config.colors.today) {
               document.getElementById('colorToday').value = config.colors.today;
@@ -744,7 +745,7 @@
           if (isToday) classes += ' today';
           if (holidayName) classes += ' holiday-day';
 
-          const titleAttr = holidayName ? ` title="${holidayName}"` : '';
+          const titleAttr = holidayName ? ` title="${escapeHtml(holidayName)}"` : '';
           const holidayDot = holidayName ? '<span class="holiday-dot"></span>' : '';
 
           html += `<div class="${classes}"${titleAttr}>${day}${holidayDot}</div>`;
