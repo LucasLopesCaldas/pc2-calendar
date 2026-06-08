@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calendário de Escala</title>
+  <style>
+    :root {
+      --bg: #1a1a2e;
+      --surface: #16213e;
+      --surface2: #0f3460;
+      --accent: #e94560;
+      --text: #eee;
+      --text-muted: #aaa;
+      --work-bg: #e94560;
+      --off-bg: transparent;
+      --today-border: #53d769;
+      --radius: 8px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      text-align: center;
+      padding: 24px 16px 8px;
+    }
+
+    header h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+    }
+
+    /* ── Config Panel ── */
+    .config-panel {
+      max-width: 600px;
+      margin: 16px auto;
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+
+    .config-panel h2 {
+      font-size: 1rem;
+      margin-bottom: 12px;
+      color: var(--accent);
+    }
+
+    .config-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: end;
+      margin-bottom: 12px;
+    }
+
+    .config-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+      min-width: 120px;
+    }
+
+    .config-field label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .config-field input, .config-field select {
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--surface2);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+
+    .config-field input:focus, .config-field select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    /* Pattern builder */
+    .pattern-builder {
+      margin-top: 8px;
+    }
+
+    .pattern-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+      min-height: 36px;
+      padding: 8px;
+      background: var(--bg);
+      border-radius: 6px;
+      border: 1px solid var(--surface2);
+    }
+
+    .pattern-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: default;
+    }
+
+    .pattern-chip.work {
+      background: var(--work-bg);
+      color: #fff;
+    }
+
+    .pattern-chip.off {
+      background: #2d4a22;
+      color: #a5d6a7;
+    }
+
+    .pattern-chip .remove-chip {
+      cursor: pointer;
+      margin-left: 2px;
+      opacity: 0.7;
+      font-size: 0.9rem;
+    }
+
+    .pattern-chip .remove-chip:hover {
+      opacity: 1;
+    }
+
+    .pattern-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: opacity 0.2s;
+    }
+
+    button:hover { opacity: 0.85; }
+
+    .btn-work {
+      background: var(--work-bg);
+      color: #fff;
+    }
+
+    .btn-off {
+      background: #2d4a22;
+      color: #a5d6a7;
+    }
+
+    .btn-clear {
+      background: var(--surface2);
+      color: var(--text-muted);
+    }
+
+    .btn-apply {
+      background: var(--accent);
+      color: #fff;
+      margin-top: 12px;
+      width: 100%;
+      padding: 10px;
+      font-size: 0.95rem;
+    }
+
+    .pattern-hint {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    /* ── Year navigation ── */
+    .year-nav {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      margin: 20px 0 12px;
+    }
+
+    .year-nav button {
+      background: var(--surface2);
+      color: var(--text);
+      font-size: 1.2rem;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+
+    .year-nav span {
+      font-size: 1.3rem;
+      font-weight: 700;
+      min-width: 60px;
+      text-align: center;
+    }
+
+    /* ── Legend ── */
+    .legend {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 16px;
+      font-size: 0.8rem;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 4px;
+    }
+
+    .legend-dot.work { background: var(--work-bg); }
+    .legend-dot.off { background: var(--surface2); }
+    .legend-dot.today { border: 2px solid var(--today-border); background: var(--surface2); }
+
+    /* ── Calendar Grid ── */
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 16px 40px;
+    }
+
+    .month-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 14px;
+    }
+
+    .month-title {
+      text-align: center;
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 10px;
+      color: var(--accent);
+    }
+
+    .weekday-header {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      text-align: center;
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
+
+    .days-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 3px;
+    }
+
+    .day-cell {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      border-radius: 4px;
+      position: relative;
+    }
+
+    .day-cell.empty { visibility: hidden; }
+
+    .day-cell.work-day {
+      background: var(--work-bg);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .day-cell.off-day {
+      background: var(--surface2);
+      color: var(--text-muted);
+    }
+
+    .day-cell.today {
+      outline: 2px solid var(--today-border);
+      outline-offset: -1px;
+    }
+
+    /* ── Toggle config ── */
+    .toggle-config {
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .toggle-config button {
+      background: var(--surface);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 6px 16px;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .calendar-grid {
+        grid-template-columns: 1fr;
+      }
+      header h1 { font-size: 1.2rem; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📅 Calendário de Escala</h1>
+  </header>
+
+  <div class="toggle-config">
+    <button onclick="toggleConfig()">⚙️ Configurar Escala</button>
+  </div>
+
+  <div class="config-panel" id="configPanel">
+    <h2>⚙️ Configuração da Escala</h2>
+
+    <div class="config-row">
+      <div class="config-field">
+        <label>Data de Início do Ciclo</label>
+        <input type="date" id="startDate">
+      </div>
+    </div>
+
+    <div class="pattern-builder">
+      <label style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">
+        Padrão da Escala (clique para montar)
+      </label>
+      <div class="pattern-list" id="patternList"></div>
+      <div class="pattern-actions">
+        <button class="btn-work" onclick="addPatternDay('work')">+ Dia de Trabalho</button>
+        <button class="btn-off" onclick="addPatternDay('off')">+ Dia de Folga</button>
+        <button class="btn-clear" onclick="clearPattern()">Limpar</button>
+      </div>
+      <div class="pattern-hint">
+        Exemplo: Para escala 12×36, adicione 1 dia de trabalho e 1 de folga.<br>
+        Para 5×2, adicione 5 dias de trabalho e 2 de folga.
+      </div>
+    </div>
+
+    <button class="btn-apply" onclick="applyConfig()">Aplicar e Gerar Calendário</button>
+  </div>
+
+  <div class="year-nav">
+    <button onclick="changeYear(-1)">‹</button>
+    <span id="yearLabel"></span>
+    <button onclick="changeYear(1)">›</button>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-dot work"></div>
+      <span>Trabalho</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot off"></div>
+      <span>Folga</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot today"></div>
+      <span>Hoje</span>
+    </div>
+  </div>
+
+  <div class="calendar-grid" id="calendarGrid"></div>
+
+  <script>
+    const MONTH_NAMES = [
+      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+    const WEEKDAY_SHORT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+    let currentYear = new Date().getFullYear();
+    let pattern = []; // array of 'work' | 'off'
+    let cycleStartDate = null;
+
+    // ── Config panel toggle ──
+    function toggleConfig() {
+      const panel = document.getElementById('configPanel');
+      panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // ── Pattern builder ──
+    function addPatternDay(type) {
+      pattern.push(type);
+      renderPattern();
+    }
+
+    function removePatternDay(index) {
+      pattern.splice(index, 1);
+      renderPattern();
+    }
+
+    function clearPattern() {
+      pattern = [];
+      renderPattern();
+    }
+
+    function renderPattern() {
+      const container = document.getElementById('patternList');
+      container.innerHTML = pattern.map((type, i) => {
+        const label = type === 'work' ? 'Trabalho' : 'Folga';
+        return `<span class="pattern-chip ${type}">
+          ${label}
+          <span class="remove-chip" onclick="removePatternDay(${i})">×</span>
+        </span>`;
+      }).join('');
+    }
+
+    // ── Apply config ──
+    function applyConfig() {
+      const dateInput = document.getElementById('startDate').value;
+      if (!dateInput) {
+        alert('Selecione a data de início do ciclo.');
+        return;
+      }
+      if (pattern.length === 0) {
+        alert('Monte o padrão da escala adicionando dias de trabalho e folga.');
+        return;
+      }
+
+      // Parse date as local (not UTC) by splitting the string
+      const [y, m, d] = dateInput.split('-').map(Number);
+      cycleStartDate = new Date(y, m - 1, d);
+
+      saveConfig();
+      renderCalendar();
+      document.getElementById('configPanel').style.display = 'none';
+    }
+
+    // ── Persistence ──
+    function saveConfig() {
+      const config = {
+        startDate: document.getElementById('startDate').value,
+        pattern: pattern
+      };
+      localStorage.setItem('pc2-calendar-config', JSON.stringify(config));
+    }
+
+    function loadConfig() {
+      const saved = localStorage.getItem('pc2-calendar-config');
+      if (saved) {
+        try {
+          const config = JSON.parse(saved);
+          if (config.startDate) {
+            document.getElementById('startDate').value = config.startDate;
+            const [y, m, d] = config.startDate.split('-').map(Number);
+            cycleStartDate = new Date(y, m - 1, d);
+          }
+          if (config.pattern && config.pattern.length > 0) {
+            pattern = config.pattern;
+            renderPattern();
+          }
+        } catch (e) {
+          // ignore invalid data
+        }
+      }
+    }
+
+    // ── Calendar rendering ──
+    function isWorkDay(date) {
+      if (!cycleStartDate || pattern.length === 0) return null;
+
+      const msPerDay = 86400000;
+      const start = new Date(cycleStartDate.getFullYear(), cycleStartDate.getMonth(), cycleStartDate.getDate());
+      const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      let diffDays = Math.round((target - start) / msPerDay);
+
+      // Handle modulo for negative numbers (dates before start)
+      diffDays = ((diffDays % pattern.length) + pattern.length) % pattern.length;
+
+      return pattern[diffDays] === 'work';
+    }
+
+    function renderCalendar() {
+      const grid = document.getElementById('calendarGrid');
+      document.getElementById('yearLabel').textContent = currentYear;
+
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+
+      let html = '';
+
+      for (let month = 0; month < 12; month++) {
+        const firstDay = new Date(currentYear, month, 1);
+        const startWeekday = firstDay.getDay(); // 0=Sun
+        const daysInMonth = new Date(currentYear, month + 1, 0).getDate();
+
+        html += `<div class="month-card">`;
+        html += `<div class="month-title">${MONTH_NAMES[month]}</div>`;
+        html += `<div class="weekday-header">`;
+        for (const wd of WEEKDAY_SHORT) {
+          html += `<div>${wd}</div>`;
+        }
+        html += `</div>`;
+        html += `<div class="days-grid">`;
+
+        // Empty cells before first day
+        for (let e = 0; e < startWeekday; e++) {
+          html += `<div class="day-cell empty"></div>`;
+        }
+
+        for (let day = 1; day <= daysInMonth; day++) {
+          const date = new Date(currentYear, month, day);
+          const work = isWorkDay(date);
+          const isToday = `${currentYear}-${month}-${day}` === todayStr;
+
+          let classes = 'day-cell';
+          if (work === true) classes += ' work-day';
+          else if (work === false) classes += ' off-day';
+          if (isToday) classes += ' today';
+
+          html += `<div class="${classes}">${day}</div>`;
+        }
+
+        html += `</div></div>`;
+      }
+
+      grid.innerHTML = html;
+    }
+
+    function changeYear(delta) {
+      currentYear += delta;
+      renderCalendar();
+    }
+
+    // ── Init ──
+    loadConfig();
+    document.getElementById('yearLabel').textContent = currentYear;
+
+    if (cycleStartDate && pattern.length > 0) {
+      document.getElementById('configPanel').style.display = 'none';
+      renderCalendar();
+    } else {
+      renderCalendar();
+    }
+  </script>
+</body>
+</html>
