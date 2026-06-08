@@ -385,7 +385,7 @@
       bottom: -1px;
       left: 50%;
       transform: translateX(-50%);
-      font-size: 0.38rem;
+      font-size: 0.5rem;
       color: var(--holiday-bg);
       white-space: nowrap;
       max-width: 100%;
@@ -460,10 +460,12 @@
       transition: transform 0.15s, box-shadow 0.15s;
     }
 
-    .day-cell:not(.empty):hover {
-      transform: scale(1.15);
-      box-shadow: 0 2px 12px rgba(0,0,0,0.4);
-      z-index: 2;
+    @media (prefers-reduced-motion: no-preference) {
+      .day-cell:not(.empty):hover {
+        transform: scale(1.15);
+        box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+        z-index: 2;
+      }
     }
 
     .day-cell.empty { visibility: hidden; cursor: default; }
@@ -731,8 +733,8 @@
 
   <!-- Day Detail Modal -->
   <div class="modal-overlay" id="dayModal" onclick="closeDayModal(event)">
-    <div class="modal">
-      <button class="modal-close" onclick="closeDayModal()">&times;</button>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalDateLabel">
+      <button class="modal-close" onclick="closeDayModal()" aria-label="Fechar">&times;</button>
       <div id="modalContent"></div>
     </div>
   </div>
@@ -765,7 +767,7 @@
     function renderColorPresets() {
       const container = document.getElementById('colorPresets');
       container.innerHTML = COLOR_PRESETS.map((preset, i) => {
-        return `<button class="color-preset-btn" onclick="applyColorPreset(${i})">
+        return `<button class="color-preset-btn" onclick="applyColorPreset(${i})" aria-label="Aplicar paleta ${preset.name}">
           <div class="preset-dots">
             <span style="background:${preset.work}"></span>
             <span style="background:${preset.off}"></span>
