@@ -15,6 +15,7 @@
       --work-bg: #e94560;
       --off-bg: transparent;
       --today-border: #53d769;
+      --holiday-bg: #ff9800;
       --radius: 8px;
     }
 
@@ -239,6 +240,70 @@
     .legend-dot.work { background: var(--work-bg); }
     .legend-dot.off { background: var(--surface2); }
     .legend-dot.today { border: 2px solid var(--today-border); background: var(--surface2); }
+    .legend-dot.holiday { background: var(--holiday-bg); }
+
+    /* ── Color Picker ── */
+    .color-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 14px;
+      margin-bottom: 8px;
+    }
+
+    .color-field {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .color-field label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .color-field input[type="color"] {
+      width: 36px;
+      height: 30px;
+      border: 1px solid var(--surface2);
+      border-radius: 6px;
+      background: var(--bg);
+      cursor: pointer;
+      padding: 2px;
+    }
+
+    /* ── Holiday ── */
+    .day-cell.holiday-day {
+      outline: 2px solid var(--holiday-bg);
+      outline-offset: -1px;
+    }
+
+    .day-cell.holiday-day.today {
+      outline: 2px solid var(--today-border);
+      box-shadow: inset 0 0 0 2px var(--holiday-bg);
+    }
+
+    .day-cell {
+      position: relative;
+      cursor: default;
+    }
+
+    .holiday-dot {
+      position: absolute;
+      bottom: 2px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--holiday-bg);
+    }
+
+    .day-cell[title] {
+      cursor: help;
+    }
 
     /* ── Calendar Grid ── */
     .calendar-grid {
@@ -366,6 +431,25 @@
     </div>
 
     <button class="btn-apply" onclick="applyConfig()">Aplicar e Gerar Calendário</button>
+
+    <div class="color-row">
+      <div class="color-field">
+        <label>Cor Trabalho</label>
+        <input type="color" id="colorWork" value="#e94560" onchange="updateColors()">
+      </div>
+      <div class="color-field">
+        <label>Cor Folga</label>
+        <input type="color" id="colorOff" value="#0f3460" onchange="updateColors()">
+      </div>
+      <div class="color-field">
+        <label>Cor Hoje</label>
+        <input type="color" id="colorToday" value="#53d769" onchange="updateColors()">
+      </div>
+      <div class="color-field">
+        <label>Cor Feriado</label>
+        <input type="color" id="colorHoliday" value="#ff9800" onchange="updateColors()">
+      </div>
+    </div>
   </div>
 
   <div class="year-nav">
@@ -387,6 +471,10 @@
       <div class="legend-dot today"></div>
       <span>Hoje</span>
     </div>
+    <div class="legend-item">
+      <div class="legend-dot holiday"></div>
+      <span>Feriado</span>
+    </div>
   </div>
 
   <div class="calendar-grid" id="calendarGrid"></div>
@@ -401,6 +489,91 @@
     let currentYear = new Date().getFullYear();
     let pattern = []; // array of 'work' | 'off'
     let cycleStartDate = null;
+
+    // ── Color management ──
+    function updateColors() {
+      const root = document.documentElement;
+      root.style.setProperty('--work-bg', document.getElementById('colorWork').value);
+      root.style.setProperty('--off-bg', document.getElementById('colorOff').value);
+      root.style.setProperty('--today-border', document.getElementById('colorToday').value);
+      root.style.setProperty('--holiday-bg', document.getElementById('colorHoliday').value);
+
+      // Update off-day surface2 to match chosen off color
+      root.style.setProperty('--surface2', document.getElementById('colorOff').value);
+
+      saveConfig();
+      renderCalendar();
+    }
+
+    // ── Brazilian Holidays ──
+    function getEasterDate(year) {
+      // Meeus/Jones/Butcher algorithm
+      const a = year % 19;
+      const b = Math.floor(year / 100);
+      const c = year % 100;
+      const d = Math.floor(b / 4);
+      const e = b % 4;
+      const f = Math.floor((b + 8) / 25);
+      const g = Math.floor((b - f + 1) / 3);
+      const h = (19 * a + b - d - g + 15) % 30;
+      const i = Math.floor(c / 4);
+      const k = c % 4;
+      const l = (32 + 2 * e + 2 * i - h - k) % 7;
+      const m = Math.floor((a + 11 * h + 22 * l) / 451);
+      const month = Math.floor((h + l - 7 * m + 114) / 31);
+      const day = ((h + l - 7 * m + 114) % 31) + 1;
+      return new Date(year, month - 1, day);
+    }
+
+    function getBrazilianHolidays(year) {
+      const holidays = {};
+
+      function addHoliday(date, name) {
+        const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+        if (holidays[key]) {
+          holidays[key] += ' / ' + name;
+        } else {
+          holidays[key] = name;
+        }
+      }
+
+      // Fixed holidays
+      addHoliday(new Date(year, 0, 1), 'Confraternização Universal');
+      addHoliday(new Date(year, 3, 21), 'Tiradentes');
+      addHoliday(new Date(year, 4, 1), 'Dia do Trabalho');
+      addHoliday(new Date(year, 8, 7), 'Independência do Brasil');
+      addHoliday(new Date(year, 9, 12), 'Nossa Sra. Aparecida');
+      addHoliday(new Date(year, 10, 2), 'Finados');
+      addHoliday(new Date(year, 10, 15), 'Proclamação da República');
+      addHoliday(new Date(year, 10, 20), 'Dia da Consciência Negra');
+      addHoliday(new Date(year, 11, 25), 'Natal');
+
+      // Moveable holidays based on Easter
+      const easter = getEasterDate(year);
+      const msPerDay = 86400000;
+
+      const carnival1 = new Date(easter.getTime() - 48 * msPerDay);
+      const carnival2 = new Date(easter.getTime() - 47 * msPerDay);
+      const goodFriday = new Date(easter.getTime() - 2 * msPerDay);
+      const corpusChristi = new Date(easter.getTime() + 60 * msPerDay);
+
+      addHoliday(carnival1, 'Carnaval');
+      addHoliday(carnival2, 'Carnaval');
+      addHoliday(goodFriday, 'Sexta-feira Santa');
+      addHoliday(easter, 'Páscoa');
+      addHoliday(corpusChristi, 'Corpus Christi');
+
+      return holidays;
+    }
+
+    let holidaysCache = {};
+
+    function getHolidaysForYear(year) {
+      if (!holidaysCache[year]) {
+        holidaysCache[year] = getBrazilianHolidays(year);
+      }
+      return holidaysCache[year];
+    }
 
     // ── Config panel toggle ──
     function toggleConfig() {
@@ -460,7 +633,13 @@
     function saveConfig() {
       const config = {
         startDate: document.getElementById('startDate').value,
-        pattern: pattern
+        pattern: pattern,
+        colors: {
+          work: document.getElementById('colorWork').value,
+          off: document.getElementById('colorOff').value,
+          today: document.getElementById('colorToday').value,
+          holiday: document.getElementById('colorHoliday').value
+        }
       };
       localStorage.setItem('pc2-calendar-config', JSON.stringify(config));
     }
@@ -481,6 +660,26 @@
               config.pattern.every(p => p === 'work' || p === 'off')) {
             pattern = config.pattern;
             renderPattern();
+          }
+
+          if (config.colors) {
+            const root = document.documentElement;
+            if (config.colors.work) {
+              document.getElementById('colorWork').value = config.colors.work;
+              root.style.setProperty('--work-bg', config.colors.work);
+            }
+            if (config.colors.off) {
+              document.getElementById('colorOff').value = config.colors.off;
+              root.style.setProperty('--surface2', config.colors.off);
+            }
+            if (config.colors.today) {
+              document.getElementById('colorToday').value = config.colors.today;
+              root.style.setProperty('--today-border', config.colors.today);
+            }
+            if (config.colors.holiday) {
+              document.getElementById('colorHoliday').value = config.colors.holiday;
+              root.style.setProperty('--holiday-bg', config.colors.holiday);
+            }
           }
         } catch (e) {
           console.warn('Configuração salva inválida, ignorando.', e);
@@ -509,6 +708,7 @@
 
       const today = new Date();
       const todayStr = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+      const holidays = getHolidaysForYear(currentYear);
 
       let html = '';
 
@@ -535,13 +735,19 @@
           const date = new Date(currentYear, month, day);
           const work = isWorkDay(date);
           const isToday = `${currentYear}-${month}-${day}` === todayStr;
+          const holidayKey = `${currentYear}-${month}-${day}`;
+          const holidayName = holidays[holidayKey];
 
           let classes = 'day-cell';
           if (work === true) classes += ' work-day';
           else if (work === false) classes += ' off-day';
           if (isToday) classes += ' today';
+          if (holidayName) classes += ' holiday-day';
 
-          html += `<div class="${classes}">${day}</div>`;
+          const titleAttr = holidayName ? ` title="${holidayName}"` : '';
+          const holidayDot = holidayName ? '<span class="holiday-dot"></span>' : '';
+
+          html += `<div class="${classes}"${titleAttr}>${day}${holidayDot}</div>`;
         }
 
         html += `</div></div>`;
