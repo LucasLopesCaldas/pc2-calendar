@@ -399,10 +399,21 @@
     });
   }
 
+  // Rola até o dia de hoje (se o ano exibido for o atual)
+  function scrollToToday() {
+    const cell = document.querySelector('.day-cell.today');
+    if (!cell) return;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    cell.scrollIntoView({ block: 'center', behavior: reduceMotion ? 'auto' : 'smooth' });
+  }
+
   // ── Init ──
   renderColorPresets();
   bindEvents();
   restoreConfig();
-  setConfigOpen(!(cycleStartDate && pattern.length > 0));
+  const configured = !!(cycleStartDate && pattern.length > 0);
+  setConfigOpen(!configured);
   renderCalendar();
+  // Com o painel aberto (primeira visita) o usuário precisa vê-lo, então não rola
+  if (configured) scrollToToday();
 })();
