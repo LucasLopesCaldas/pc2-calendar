@@ -3,7 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Calendário anual com escala de trabalho personalizável e feriados nacionais brasileiros.">
+  <meta name="theme-color" content="#0f0f1a">
+  <meta name="color-scheme" content="dark">
   <title>Calendário de Escala</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📅</text></svg>">
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -12,19 +16,19 @@
   </header>
 
   <div class="toggle-config">
-    <button id="toggleConfigBtn">⚙️ Configurar Escala</button>
+    <button id="toggleConfigBtn" aria-expanded="true" aria-controls="configPanel">⚙️ Configurar Escala</button>
   </div>
 
-  <div class="config-panel" id="configPanel">
-    <h2>⚙️ Configuração da Escala</h2>
+  <section class="config-panel" id="configPanel" aria-labelledby="configTitle">
+    <h2 id="configTitle">⚙️ Configuração da Escala</h2>
 
     <div class="config-row">
       <div class="config-field">
-        <label>Data de Início do Ciclo</label>
+        <label for="startDate">Data de Início do Ciclo</label>
         <input type="date" id="startDate">
       </div>
       <div class="config-field">
-        <label>Primeiro dia da semana</label>
+        <label for="firstDayOfWeek">Primeiro dia da semana</label>
         <select id="firstDayOfWeek">
           <option value="0">Domingo</option>
           <option value="1">Segunda-feira</option>
@@ -38,10 +42,8 @@
     </div>
 
     <div class="pattern-builder">
-      <label style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px;font-weight:600;">
-        Padrão da Escala (clique para montar)
-      </label>
-      <div class="pattern-list" id="patternList"></div>
+      <div class="field-label" id="patternLabel">Padrão da Escala</div>
+      <ul class="pattern-list" id="patternList" aria-labelledby="patternLabel" data-empty="Nenhum dia ainda — use os botões abaixo"></ul>
       <div class="pattern-actions">
         <button class="btn-work" data-add="work">+ Dia de Trabalho</button>
         <button class="btn-off" data-add="off">+ Dia de Folga</button>
@@ -53,36 +55,38 @@
       </div>
     </div>
 
+    <p class="form-error" id="configError" role="alert"></p>
     <button class="btn-apply" id="applyConfigBtn">Aplicar e Gerar Calendário</button>
 
     <div class="config-section-title">Cores</div>
 
     <div class="color-row">
       <div class="color-field">
-        <label>Trabalho</label>
+        <label for="colorWork">Trabalho</label>
         <input type="color" id="colorWork" value="#e94560">
       </div>
       <div class="color-field">
-        <label>Folga</label>
+        <label for="colorOff">Folga</label>
         <input type="color" id="colorOff" value="#0f3460">
       </div>
       <div class="color-field">
-        <label>Hoje</label>
+        <label for="colorToday">Hoje</label>
         <input type="color" id="colorToday" value="#53d769">
       </div>
       <div class="color-field">
-        <label>Feriado</label>
+        <label for="colorHoliday">Feriado</label>
         <input type="color" id="colorHoliday" value="#ff9800">
       </div>
     </div>
 
     <div class="config-section-title">Paletas sugeridas</div>
     <div class="color-presets" id="colorPresets"></div>
-  </div>
+  </section>
 
+  <main>
   <div class="year-nav">
     <button id="prevYearBtn" aria-label="Ano anterior">‹</button>
-    <span id="yearLabel"></span>
+    <span id="yearLabel" aria-live="polite"></span>
     <button id="nextYearBtn" aria-label="Próximo ano">›</button>
   </div>
 
@@ -106,9 +110,10 @@
   </div>
 
   <div class="calendar-grid" id="calendarGrid"></div>
+  </main>
 
   <!-- Day Detail Modal -->
-  <div class="modal-overlay" id="dayModal">
+  <div class="modal-overlay" id="dayModal" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalDateLabel">
       <button class="modal-close" id="modalCloseBtn" aria-label="Fechar">&times;</button>
       <div id="modalContent"></div>

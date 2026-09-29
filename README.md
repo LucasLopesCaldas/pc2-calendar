@@ -27,9 +27,11 @@ Calendário estático com escala de trabalho personalizável.
 
 - **Primeiro dia da semana personalizável** — escolha qualquer dia como início da semana
 - **Paletas de cores sugeridas** — 8 temas pré-definidos (Padrão, Oceano, Floresta, Lavanda, Pôr do Sol, Monocromático, Neon, Terra)
-- **Nomes de feriados** — feriados brasileiros são indicados diretamente nas células do calendário
+- **Nomes de feriados** — dias de feriado são destacados no calendário e listados abaixo de cada mês
 - **Modal de detalhes** — clique em qualquer dia para ver informações detalhadas (data, dia da semana, escala, feriado)
 - **Feriados brasileiros** — feriados nacionais fixos e móveis (Carnaval, Páscoa, Corpus Christi, etc.)
+- **Acessível** — navegação completa pelo teclado (Tab/Enter nos dias, Esc fecha o modal) e rótulos para leitores de tela
+- **Contraste automático** — o texto dos dias fica claro ou escuro conforme a cor escolhida
 
 A configuração é salva no navegador (localStorage) e será lembrada nas próximas visitas.
 

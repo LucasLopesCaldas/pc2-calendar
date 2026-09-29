@@ -26,6 +26,8 @@
   const MAX_PATTERN_LENGTH = 60;
   const CONFIG_VERSION = 1;
   const HEX_COLOR = /^#[0-9a-f]{6}$/i;
+  const LIGHT_TEXT = '#ffffff';
+  const DARK_TEXT = '#0f0f1a';
 
   // ── Datas ──
   // Soma por dias do calendário (não por ms) para não sofrer com horário de verão
@@ -44,6 +46,12 @@
     const date = new Date(y, m - 1, d);
     if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== d) return null;
     return date;
+  }
+
+  // Date → 'YYYY-MM-DD' (data local)
+  function formatLocalDate(date) {
+    const pad = n => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
   }
 
   // ── Feriados brasileiros ──
@@ -170,18 +178,45 @@
               .replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  // Rótulo curto exibido na célula: primeiro feriado do dia, até 10 caracteres
-  function shortHolidayLabel(holidayName) {
-    return holidayName.split(' / ')[0].substring(0, 10);
+  // Feriados de um mês agrupados por nome, na ordem do calendário:
+  // [{ name: 'Carnaval', days: [16, 17] }, ...]
+  function getMonthHolidays(year, month) {
+    const holidays = getHolidaysForYear(year);
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const groups = [];
+    for (let day = 1; day <= daysInMonth; day++) {
+      const names = holidays[dateKey(year, month, day)];
+      if (!names) continue;
+      for (const name of names.split(' / ')) {
+        const group = groups.find(g => g.name === name);
+        if (group) group.days.push(day);
+        else groups.push({ name, days: [day] });
+      }
+    }
+    return groups;
+  }
+
+  // ── Cores ──
+  function relativeLuminance(hex) {
+    const channels = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
+      .map(c => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)));
+    return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+  }
+
+  // Cor de texto sobre o fundo informado: branco enquanto tiver contraste
+  // mínimo de 3:1 (mantém o visual das paletas); em fundos claros, escuro
+  function readableTextColor(backgroundHex) {
+    const contrastWithWhite = 1.05 / (relativeLuminance(backgroundHex) + 0.05);
+    return contrastWithWhite >= 3 ? LIGHT_TEXT : DARK_TEXT;
   }
 
   const PC2Core = {
     MONTH_NAMES, WEEKDAY_SHORT, WEEKDAY_LONG, COLOR_KEYS, COLOR_PRESETS,
     MAX_PATTERN_LENGTH, CONFIG_VERSION,
-    addDays, dateKey, parseLocalDate,
+    addDays, dateKey, parseLocalDate, formatLocalDate,
     getEasterDate, getBrazilianHolidays, getHolidaysForYear,
     isWorkDay, getOrderedWeekdays, isValidPattern, parseConfig,
-    escapeHtml, shortHolidayLabel
+    getMonthHolidays, readableTextColor, escapeHtml
   };
 
   if (typeof module !== 'undefined' && module.exports) {

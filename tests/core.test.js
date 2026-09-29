@@ -69,6 +69,11 @@ test('parseLocalDate rejeita datas inexistentes e formatos inválidos', () => {
   assert.strictEqual(Core.parseLocalDate(undefined), null);
 });
 
+test('formatLocalDate é o inverso de parseLocalDate', () => {
+  assert.strictEqual(Core.formatLocalDate(new Date(2026, 0, 5)), '2026-01-05');
+  assert.strictEqual(Core.formatLocalDate(Core.parseLocalDate('2024-12-31')), '2024-12-31');
+});
+
 test('parseConfig aceita config válida (inclusive antiga, sem version)', () => {
   const c = Core.parseConfig(JSON.stringify({
     startDate: '2026-01-01', pattern: ['work', 'off'], firstDayOfWeek: 1,
@@ -103,8 +108,19 @@ test('parseConfig rejeita padrão longo demais e JSON quebrado', () => {
   assert.strictEqual(Core.parseConfig('null'), null);
 });
 
-test('shortHolidayLabel usa o primeiro nome, até 10 caracteres', () => {
-  assert.strictEqual(Core.shortHolidayLabel('Natal'), 'Natal');
-  assert.strictEqual(Core.shortHolidayLabel('Tiradentes / Páscoa'), 'Tiradentes');
-  assert.strictEqual(Core.shortHolidayLabel('Confraternização Universal'), 'Confratern');
+test('getMonthHolidays agrupa dias do mesmo feriado e separa feriados coincidentes', () => {
+  assert.deepStrictEqual(Core.getMonthHolidays(2026, 1), [{ name: 'Carnaval', days: [16, 17] }]);
+  assert.deepStrictEqual(Core.getMonthHolidays(2019, 3), [
+    { name: 'Sexta-feira Santa', days: [19] },
+    { name: 'Tiradentes', days: [21] },
+    { name: 'Páscoa', days: [21] }
+  ]);
+  assert.deepStrictEqual(Core.getMonthHolidays(2026, 7), []);
+});
+
+test('readableTextColor escolhe texto claro em fundo escuro e escuro em fundo claro', () => {
+  assert.strictEqual(Core.readableTextColor('#0f3460'), '#ffffff');
+  assert.strictEqual(Core.readableTextColor('#e94560'), '#ffffff');
+  assert.strictEqual(Core.readableTextColor('#f1fa8c'), '#0f0f1a');
+  assert.strictEqual(Core.readableTextColor('#ffffff'), '#0f0f1a');
 });

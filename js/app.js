@@ -12,6 +12,12 @@
     holiday: '--holiday-bg'
   };
 
+  // Variáveis de cor do texto calculadas a partir do fundo
+  const CSS_TEXT_VARS = {
+    work: '--work-fg',
+    off: '--off-fg'
+  };
+
   const COLOR_INPUT_IDS = {
     work: 'colorWork',
     off: 'colorOff',
@@ -19,22 +25,27 @@
     holiday: 'colorHoliday'
   };
 
+  const TYPE_LABELS = { work: 'Trabalho', off: 'Folga' };
+
   let currentYear = new Date().getFullYear();
-  let pattern = []; // array of 'work' | 'off'
+  let pattern = [];      // padrão aplicado ao calendário: 'work' | 'off'
+  let draftPattern = []; // padrão em edição no painel (só vale após "Aplicar")
   let cycleStartDate = null;
   let firstDayOfWeek = 0; // 0=Sunday, 1=Monday, etc.
+  let lastFocusedBeforeModal = null;
 
   const $ = id => document.getElementById(id);
 
   // ── Persistence ──
+  // Salva apenas o estado aplicado (não o rascunho do painel)
   function saveConfig() {
     const colors = {};
     for (const key of Core.COLOR_KEYS) colors[key] = $(COLOR_INPUT_IDS[key]).value;
 
     Storage.saveConfig({
-      startDate: $('startDate').value,
+      startDate: cycleStartDate ? Core.formatLocalDate(cycleStartDate) : null,
       pattern: pattern,
-      firstDayOfWeek: parseInt($('firstDayOfWeek').value, 10),
+      firstDayOfWeek: firstDayOfWeek,
       colors: colors
     });
   }
@@ -50,6 +61,7 @@
 
     if (config.pattern) {
       pattern = config.pattern;
+      draftPattern = pattern.slice();
       renderPattern();
     }
 
@@ -69,18 +81,21 @@
       if (!colors[key]) continue;
       $(COLOR_INPUT_IDS[key]).value = colors[key];
       root.style.setProperty(CSS_COLOR_VARS[key], colors[key]);
+      if (CSS_TEXT_VARS[key]) {
+        root.style.setProperty(CSS_TEXT_VARS[key], Core.readableTextColor(colors[key]));
+      }
     }
   }
 
   function renderColorPresets() {
     $('colorPresets').innerHTML = Core.COLOR_PRESETS.map((preset, i) => {
-      return `<button class="color-preset-btn" data-preset="${i}" aria-label="Aplicar paleta ${preset.name}">
-        <div class="preset-dots">
+      return `<button type="button" class="color-preset-btn" data-preset="${i}" aria-pressed="false" aria-label="Aplicar paleta ${preset.name}">
+        <span class="preset-dots" aria-hidden="true">
           <span style="background:${preset.work}"></span>
           <span style="background:${preset.off}"></span>
           <span style="background:${preset.today}"></span>
           <span style="background:${preset.holiday}"></span>
-        </div>
+        </span>
         ${preset.name}
       </button>`;
     }).join('');
@@ -89,6 +104,7 @@
   function highlightPreset(index) {
     document.querySelectorAll('.color-preset-btn').forEach((btn, j) => {
       btn.classList.toggle('active', j === index);
+      btn.setAttribute('aria-pressed', String(j === index));
     });
   }
 
@@ -115,39 +131,51 @@
     renderCalendar();
   }
 
-  // ── Config panel toggle ──
+  // ── Config panel ──
+  function setConfigOpen(open) {
+    $('configPanel').hidden = !open;
+    $('toggleConfigBtn').setAttribute('aria-expanded', String(open));
+  }
+
   function toggleConfig() {
-    const panel = $('configPanel');
-    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    setConfigOpen($('configPanel').hidden);
+  }
+
+  function showError(message) {
+    $('configError').textContent = message;
   }
 
   // ── Pattern builder ──
   function addPatternDay(type) {
-    if (pattern.length >= Core.MAX_PATTERN_LENGTH) {
-      alert(`O padrão pode ter no máximo ${Core.MAX_PATTERN_LENGTH} dias.`);
+    if (draftPattern.length >= Core.MAX_PATTERN_LENGTH) {
+      showError(`O padrão pode ter no máximo ${Core.MAX_PATTERN_LENGTH} dias.`);
       return;
     }
-    pattern.push(type);
+    showError('');
+    draftPattern.push(type);
     renderPattern();
   }
 
   function removePatternDay(index) {
-    pattern.splice(index, 1);
+    draftPattern.splice(index, 1);
     renderPattern();
+    // Mantém o foco na lista ao remover pelo teclado
+    const chips = $('patternList').querySelectorAll('.remove-chip');
+    if (chips.length) chips[Math.min(index, chips.length - 1)].focus();
   }
 
   function clearPattern() {
-    pattern = [];
+    draftPattern = [];
     renderPattern();
   }
 
   function renderPattern() {
-    $('patternList').innerHTML = pattern.map((type, i) => {
-      const label = type === 'work' ? 'Trabalho' : 'Folga';
-      return `<span class="pattern-chip ${type}">
-        ${label}
-        <span class="remove-chip" data-index="${i}">×</span>
-      </span>`;
+    $('patternList').innerHTML = draftPattern.map((type, i) => {
+      const label = TYPE_LABELS[type];
+      return `<li class="pattern-chip ${type}">
+        <span class="chip-index" aria-hidden="true">${i + 1}</span>${label}
+        <button type="button" class="remove-chip" data-index="${i}" aria-label="Remover dia ${i + 1} (${label})">×</button>
+      </li>`;
     }).join('');
   }
 
@@ -155,23 +183,31 @@
   function applyConfig() {
     const startDate = Core.parseLocalDate($('startDate').value);
     if (!startDate) {
-      alert('Selecione a data de início do ciclo.');
+      showError('Selecione a data de início do ciclo.');
+      $('startDate').focus();
       return;
     }
-    if (pattern.length === 0) {
-      alert('Monte o padrão da escala adicionando dias de trabalho e folga.');
+    if (draftPattern.length === 0) {
+      showError('Monte o padrão da escala adicionando dias de trabalho e folga.');
       return;
     }
 
+    showError('');
     cycleStartDate = startDate;
+    pattern = draftPattern.slice();
     firstDayOfWeek = parseInt($('firstDayOfWeek').value, 10);
 
     saveConfig();
     renderCalendar();
-    $('configPanel').style.display = 'none';
+    setConfigOpen(false);
   }
 
   // ── Calendar rendering ──
+  function formatDays(days) {
+    if (days.length === 1) return String(days[0]);
+    return days.slice(0, -1).join(', ') + ' e ' + days[days.length - 1];
+  }
+
   function renderCalendar() {
     $('yearLabel').textContent = currentYear;
 
@@ -186,10 +222,11 @@
       const rawWeekday = new Date(currentYear, month, 1).getDay(); // 0=Sun
       const startWeekday = ((rawWeekday - firstDayOfWeek) + 7) % 7;
       const daysInMonth = new Date(currentYear, month + 1, 0).getDate();
+      const monthName = Core.MONTH_NAMES[month];
 
-      html += `<div class="month-card">`;
-      html += `<div class="month-title">${Core.MONTH_NAMES[month]}</div>`;
-      html += `<div class="weekday-header">`;
+      html += `<section class="month-card" aria-label="${monthName} de ${currentYear}">`;
+      html += `<h3 class="month-title">${monthName}</h3>`;
+      html += `<div class="weekday-header" aria-hidden="true">`;
       for (const wd of orderedWeekdays) {
         html += `<div>${wd}</div>`;
       }
@@ -198,29 +235,41 @@
 
       // Empty cells before first day
       for (let e = 0; e < startWeekday; e++) {
-        html += `<div class="day-cell empty"></div>`;
+        html += `<div class="day-cell empty" aria-hidden="true"></div>`;
       }
 
       for (let day = 1; day <= daysInMonth; day++) {
         const key = Core.dateKey(currentYear, month, day);
         const work = Core.isWorkDay(new Date(currentYear, month, day), cycleStartDate, pattern);
         const holidayName = holidays[key];
+        const isToday = key === todayKey;
 
         let classes = 'day-cell';
-        if (work === true) classes += ' work-day';
-        else if (work === false) classes += ' off-day';
-        if (key === todayKey) classes += ' today';
-        if (holidayName) classes += ' holiday-day';
+        const labelParts = [`${day} de ${monthName.toLowerCase()}`];
+        if (work === true) { classes += ' work-day'; labelParts.push('trabalho'); }
+        else if (work === false) { classes += ' off-day'; labelParts.push('folga'); }
+        if (isToday) { classes += ' today'; labelParts.push('hoje'); }
+        if (holidayName) { classes += ' holiday-day'; labelParts.push(`feriado: ${holidayName}`); }
 
         const titleAttr = holidayName ? ` title="${Core.escapeHtml(holidayName)}"` : '';
-        const holidayLabel = holidayName
-          ? `<span class="holiday-label">${Core.escapeHtml(Core.shortHolidayLabel(holidayName))}</span>`
-          : '';
+        const holidayDot = holidayName ? `<span class="holiday-dot" aria-hidden="true"></span>` : '';
+        const currentAttr = isToday ? ' aria-current="date"' : '';
 
-        html += `<div class="${classes}"${titleAttr} data-date="${key}">${day}${holidayLabel}</div>`;
+        html += `<button type="button" class="${classes}"${titleAttr}${currentAttr} data-date="${key}" aria-label="${Core.escapeHtml(labelParts.join(', '))}">${day}${holidayDot}</button>`;
       }
 
-      html += `</div></div>`;
+      html += `</div>`;
+
+      const monthHolidays = Core.getMonthHolidays(currentYear, month);
+      if (monthHolidays.length) {
+        html += `<ul class="month-holidays">`;
+        for (const h of monthHolidays) {
+          html += `<li><span class="month-holidays-day">${formatDays(h.days)}</span> ${Core.escapeHtml(h.name)}</li>`;
+        }
+        html += `</ul>`;
+      }
+
+      html += `</section>`;
     }
 
     $('calendarGrid').innerHTML = html;
@@ -232,6 +281,10 @@
   }
 
   // ── Day Modal ──
+  function isModalOpen() {
+    return $('dayModal').classList.contains('active');
+  }
+
   function openDayModal(year, month, day) {
     const date = new Date(year, month, day);
     const work = Core.isWorkDay(date, cycleStartDate, pattern);
@@ -248,38 +301,52 @@
 
     if (isToday) {
       content += `<div class="modal-info-row today-info">
-        <span class="info-icon">📍</span>
+        <span class="info-icon" aria-hidden="true">📍</span>
         <span>Hoje</span>
       </div>`;
     }
 
     if (work === true) {
       content += `<div class="modal-info-row work-info">
-        <span class="info-icon">💼</span>
+        <span class="info-icon" aria-hidden="true">💼</span>
         <span>Dia de <strong>Trabalho</strong></span>
       </div>`;
     } else if (work === false) {
       content += `<div class="modal-info-row off-info">
-        <span class="info-icon">🏖️</span>
+        <span class="info-icon" aria-hidden="true">🏖️</span>
         <span>Dia de <strong>Folga</strong></span>
+      </div>`;
+    } else {
+      content += `<div class="modal-info-row">
+        <span class="info-icon" aria-hidden="true">⚙️</span>
+        <span>Escala ainda não configurada</span>
       </div>`;
     }
 
     if (holidayName) {
       for (const hn of holidayName.split(' / ')) {
         content += `<div class="modal-info-row holiday-info">
-          <span class="info-icon">🎉</span>
+          <span class="info-icon" aria-hidden="true">🎉</span>
           <span><strong>Feriado:</strong> ${Core.escapeHtml(hn)}</span>
         </div>`;
       }
     }
 
+    lastFocusedBeforeModal = document.activeElement;
     $('modalContent').innerHTML = content;
     $('dayModal').classList.add('active');
+    $('dayModal').setAttribute('aria-hidden', 'false');
+    $('modalCloseBtn').focus();
   }
 
   function closeDayModal() {
+    if (!isModalOpen()) return;
     $('dayModal').classList.remove('active');
+    $('dayModal').setAttribute('aria-hidden', 'true');
+    if (lastFocusedBeforeModal && document.contains(lastFocusedBeforeModal)) {
+      lastFocusedBeforeModal.focus();
+    }
+    lastFocusedBeforeModal = null;
   }
 
   // ── Events ──
@@ -291,6 +358,7 @@
     });
     $('clearPatternBtn').addEventListener('click', clearPattern);
     $('applyConfigBtn').addEventListener('click', applyConfig);
+    $('startDate').addEventListener('change', () => showError(''));
     for (const key of Core.COLOR_KEYS) {
       $(COLOR_INPUT_IDS[key]).addEventListener('change', updateColors);
     }
@@ -320,7 +388,14 @@
     });
     $('modalCloseBtn').addEventListener('click', closeDayModal);
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') closeDayModal();
+      if (!isModalOpen()) return;
+      if (e.key === 'Escape') {
+        closeDayModal();
+      } else if (e.key === 'Tab') {
+        // O único elemento focável do modal é o botão de fechar
+        e.preventDefault();
+        $('modalCloseBtn').focus();
+      }
     });
   }
 
@@ -328,9 +403,6 @@
   renderColorPresets();
   bindEvents();
   restoreConfig();
-
-  if (cycleStartDate && pattern.length > 0) {
-    $('configPanel').style.display = 'none';
-  }
+  setConfigOpen(!(cycleStartDate && pattern.length > 0));
   renderCalendar();
 })();
