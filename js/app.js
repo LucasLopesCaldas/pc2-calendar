@@ -399,12 +399,66 @@
     });
   }
 
+  // ── Scroll até hoje ──
+  const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const easeInOutCubic = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+
+  // Posição de rolagem que centraliza o elemento na tela (limitada ao documento)
+  function centeredScrollY(el) {
+    const rect = el.getBoundingClientRect();
+    const target = window.scrollY + rect.top - (window.innerHeight - rect.height) / 2;
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    return Math.max(0, Math.min(target, max));
+  }
+
+  // Animação própria (em vez de behavior: 'smooth'), que no celular é
+  // interrompida pelo navegador durante o carregamento. Para se o usuário
+  // interagir com a página.
+  function animateScrollTo(targetY, duration, onDone) {
+    const startY = window.scrollY;
+    const distance = targetY - startY;
+    const cancelEvents = ['wheel', 'touchstart', 'keydown', 'mousedown'];
+    let startTime = null;
+    let cancelled = false;
+
+    const cancel = () => { cancelled = true; };
+    const cleanup = () => cancelEvents.forEach(ev => window.removeEventListener(ev, cancel));
+    cancelEvents.forEach(ev => window.addEventListener(ev, cancel, { passive: true }));
+
+    function step(now) {
+      if (cancelled) { cleanup(); return; }
+      if (startTime === null) startTime = now;
+      const t = Math.min((now - startTime) / duration, 1);
+      window.scrollTo(0, startY + distance * easeInOutCubic(t));
+      if (t < 1) {
+        requestAnimationFrame(step);
+      } else {
+        cleanup();
+        if (onDone) onDone();
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
+  function highlightToday(cell) {
+    cell.classList.remove('today-pulse');
+    void cell.offsetWidth; // reinicia a animação CSS
+    cell.classList.add('today-pulse');
+    cell.addEventListener('animationend', () => cell.classList.remove('today-pulse'), { once: true });
+  }
+
   // Rola até o dia de hoje (se o ano exibido for o atual)
-  function scrollToToday(smooth) {
+  function scrollToToday(animated) {
     const cell = document.querySelector('.day-cell.today');
     if (!cell) return;
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    cell.scrollIntoView({ block: 'center', behavior: smooth && !reduceMotion ? 'smooth' : 'auto' });
+    const targetY = centeredScrollY(cell);
+    if (!animated || prefersReducedMotion()) {
+      window.scrollTo(0, targetY);
+      return;
+    }
+    // Duração proporcional à distância: 600 ms a 1,4 s
+    const duration = Math.min(1400, Math.max(600, Math.abs(targetY - window.scrollY) * 0.4));
+    animateScrollTo(targetY, duration, () => highlightToday(cell));
   }
 
   // ── Init ──
@@ -416,15 +470,17 @@
   renderCalendar();
   // Com o painel aberto (primeira visita) o usuário precisa vê-lo, então não rola
   if (configured) {
-    // Impede o navegador de restaurar a posição antiga da recarga por cima da rolagem
+    // Impede o navegador de restaurar a posição antiga da recarga: a animação
+    // sempre parte do topo
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
-    scrollToToday(false);
-    // Reaplica após o carregamento completo (fontes/layout) e após a restauração
-    // tardia que alguns navegadores fazem (Firefox, Safari)
-    window.addEventListener('load', () => {
-      scrollToToday(false);
-      setTimeout(() => scrollToToday(false), 150);
-    });
+    window.scrollTo(0, 0);
+
+    // Começa depois do carregamento completo (layout estável) e de uma pausa
+    // curta, para o usuário ver o topo antes do movimento
+    const start = () => setTimeout(() => scrollToToday(true), 350);
+    if (document.readyState === 'complete') start();
+    else window.addEventListener('load', start, { once: true });
+
     // Ao voltar pelo histórico/cache (bfcache) a página não recarrega os scripts
     window.addEventListener('pageshow', e => { if (e.persisted) scrollToToday(false); });
   }

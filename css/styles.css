@@ -549,6 +549,28 @@ button:active { transform: translateY(0); }
   font-weight: 800;
 }
 
+/* Pulso ao chegar no dia de hoje pela rolagem automática */
+@media (prefers-reduced-motion: no-preference) {
+  .day-cell.today-pulse {
+    animation: today-pulse 0.9s ease-out 2;
+    z-index: 2;
+  }
+}
+
+@keyframes today-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--today-border) 70%, transparent);
+  }
+  30% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 14px transparent;
+  }
+}
+
 .day-cell:focus-visible {
   outline: 2px solid var(--text);
   outline-offset: 2px;
