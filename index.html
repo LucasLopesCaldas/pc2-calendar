@@ -872,17 +872,19 @@
       addHoliday(new Date(year, 9, 12), 'Nossa Sra. Aparecida');
       addHoliday(new Date(year, 10, 2), 'Finados');
       addHoliday(new Date(year, 10, 15), 'Proclamação da República');
-      addHoliday(new Date(year, 10, 20), 'Dia da Consciência Negra');
+      // Feriado nacional a partir de 2024 (Lei 14.759/2023)
+      if (year >= 2024) addHoliday(new Date(year, 10, 20), 'Dia da Consciência Negra');
       addHoliday(new Date(year, 11, 25), 'Natal');
 
       // Moveable holidays based on Easter
       const easter = getEasterDate(year);
-      const msPerDay = 86400000;
+      // Soma por dias do calendário (não por ms) para não sofrer com horário de verão
+      const addDays = (date, n) => new Date(date.getFullYear(), date.getMonth(), date.getDate() + n);
 
-      const carnival1 = new Date(easter.getTime() - 48 * msPerDay);
-      const carnival2 = new Date(easter.getTime() - 47 * msPerDay);
-      const goodFriday = new Date(easter.getTime() - 2 * msPerDay);
-      const corpusChristi = new Date(easter.getTime() + 60 * msPerDay);
+      const carnival1 = addDays(easter, -48);
+      const carnival2 = addDays(easter, -47);
+      const goodFriday = addDays(easter, -2);
+      const corpusChristi = addDays(easter, 60);
 
       addHoliday(carnival1, 'Carnaval');
       addHoliday(carnival2, 'Carnaval');
@@ -964,6 +966,15 @@
     }
 
     // ── Persistence ──
+    // localStorage pode lançar exceção (modo anônimo, cookies bloqueados)
+    function storageGet(key) {
+      try { return localStorage.getItem(key); } catch (e) { return null; }
+    }
+
+    function storageSet(key, value) {
+      try { localStorage.setItem(key, value); } catch (e) { /* segue sem persistir */ }
+    }
+
     function saveConfig() {
       const config = {
         startDate: document.getElementById('startDate').value,
@@ -976,11 +987,11 @@
           holiday: document.getElementById('colorHoliday').value
         }
       };
-      localStorage.setItem('pc2-calendar-config', JSON.stringify(config));
+      storageSet('pc2-calendar-config', JSON.stringify(config));
     }
 
     function loadConfig() {
-      const saved = localStorage.getItem('pc2-calendar-config');
+      const saved = storageGet('pc2-calendar-config');
       if (saved) {
         try {
           const config = JSON.parse(saved);
@@ -1119,7 +1130,7 @@
       const dayStr = String(day).padStart(2, '0');
       const monthStr = String(month + 1).padStart(2, '0');
 
-      let content = `<div class="modal-date">${dayStr}/${monthStr}/${year}</div>`;
+      let content = `<div class="modal-date" id="modalDateLabel">${dayStr}/${monthStr}/${year}</div>`;
       content += `<div class="modal-weekday">${weekdayName}</div>`;
 
       if (isToday) {
