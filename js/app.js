@@ -400,11 +400,11 @@
   }
 
   // Rola até o dia de hoje (se o ano exibido for o atual)
-  function scrollToToday() {
+  function scrollToToday(smooth) {
     const cell = document.querySelector('.day-cell.today');
     if (!cell) return;
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    cell.scrollIntoView({ block: 'center', behavior: reduceMotion ? 'auto' : 'smooth' });
+    cell.scrollIntoView({ block: 'center', behavior: smooth && !reduceMotion ? 'smooth' : 'auto' });
   }
 
   // ── Init ──
@@ -415,5 +415,17 @@
   setConfigOpen(!configured);
   renderCalendar();
   // Com o painel aberto (primeira visita) o usuário precisa vê-lo, então não rola
-  if (configured) scrollToToday();
+  if (configured) {
+    // Impede o navegador de restaurar a posição antiga da recarga por cima da rolagem
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+    scrollToToday(false);
+    // Reaplica após o carregamento completo (fontes/layout) e após a restauração
+    // tardia que alguns navegadores fazem (Firefox, Safari)
+    window.addEventListener('load', () => {
+      scrollToToday(false);
+      setTimeout(() => scrollToToday(false), 150);
+    });
+    // Ao voltar pelo histórico/cache (bfcache) a página não recarrega os scripts
+    window.addEventListener('pageshow', e => { if (e.persisted) scrollToToday(false); });
+  }
 })();
