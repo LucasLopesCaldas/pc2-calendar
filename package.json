@@ -1,0 +1,8 @@
+{
+  "name": "pc2-calendar",
+  "private": true,
+  "description": "Calendário estático com escala de trabalho personalizável",
+  "scripts": {
+    "test": "node --test"
+  }
+}

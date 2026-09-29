@@ -32,3 +32,26 @@ Calendário estático com escala de trabalho personalizável.
 - **Feriados brasileiros** — feriados nacionais fixos e móveis (Carnaval, Páscoa, Corpus Christi, etc.)
 
 A configuração é salva no navegador (localStorage) e será lembrada nas próximas visitas.
+
+## Estrutura do projeto
+
+```
+index.html          markup da página
+css/styles.css      estilos
+js/core.js          lógica pura (feriados, escala, validação da configuração) — sem DOM
+js/storage.js       leitura e gravação da configuração no localStorage
+js/app.js           estado, renderização e eventos da interface
+tests/              testes da lógica em js/core.js
+```
+
+Os scripts são carregados com `<script src>` (sem módulos ES), então o `index.html` continua abrindo direto do disco, sem servidor.
+
+## Testes
+
+Requer Node.js 18+ (sem dependências):
+
+```
+npm test
+```
+
+Para testar em outro fuso horário: `TZ=Europe/Lisbon npm test`. O CI (GitHub Actions) roda os testes em três fusos a cada push e pull request.
