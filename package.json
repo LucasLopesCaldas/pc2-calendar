@@ -3,6 +3,7 @@
   "private": true,
   "description": "Calendário estático com escala de trabalho personalizável",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "version-assets": "node scripts/version-assets.js"
   }
 }

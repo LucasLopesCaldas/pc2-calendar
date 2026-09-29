@@ -57,3 +57,14 @@ npm test
 ```
 
 Para testar em outro fuso horário: `TZ=Europe/Lisbon npm test`. O CI (GitHub Actions) roda os testes em três fusos a cada push e pull request.
+
+## Publicando alterações
+
+Depois de alterar qualquer arquivo em `css/` ou `js/`, rode:
+
+```
+npm run version-assets
+```
+
+Isso atualiza o `?v=<hash>` das referências no `index.html`, para que os navegadores baixem os arquivos novos em vez de usar o cache. O CI falha se o hash estiver desatualizado.
+
